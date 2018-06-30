@@ -32,6 +32,7 @@
 #endif /* Linux kernel >= 4.0.0 */
 
 #include <rtw_wifi_regd.h>
+#include <hal_data.h>
 
 #define RTW_MAX_MGMT_TX_CNT (8)
 #define RTW_MAX_MGMT_TX_MS_GAS (500)
@@ -6329,12 +6330,44 @@ static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_
 	
 }
 
+static void rtw_cfg80211_create_vht_cap(_adapter *padapter, struct ieee80211_sta_vht_cap *vht_cap)
+{
+#ifdef CONFIG_80211AC_VHT
+	static int highest_rates[] = {433, 866, 1300, 1733}; // 80 MHz
+	u16 mcs_map;
+	int i;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
+	struct mlme_priv 		*pmlmepriv = &padapter->mlmepriv;
+	struct vht_priv		*pvhtpriv = &pmlmepriv->vhtpriv;
+
+	vht_cap->vht_supported = 1;
+	vht_cap->cap = IEEE80211_VHT_CAP_RXLDPC|IEEE80211_VHT_CAP_SHORT_GI_80|IEEE80211_VHT_CAP_TXSTBC|
+		IEEE80211_VHT_CAP_SU_BEAMFORMEE_CAPABLE;
+
+	mcs_map = 0;
+	for (i = 0; i < 8; i++) {
+		if(i < pHalData->NumTotalRFPath)
+			mcs_map |= IEEE80211_VHT_MCS_SUPPORT_0_9 << (i*2);
+		else
+			mcs_map |= IEEE80211_VHT_MCS_NOT_SUPPORTED << (i*2);
+	}
+
+	vht_cap->vht_mcs.tx_mcs_map =
+	vht_cap->vht_mcs.rx_mcs_map = cpu_to_le16(mcs_map);
+	vht_cap->vht_mcs.tx_highest =
+	vht_cap->vht_mcs.rx_highest = cpu_to_le16(highest_rates[pHalData->NumTotalRFPath-1]);
+#else
+	vht_cap->vht_supported = 0;
+#endif
+}
+
 void rtw_cfg80211_init_wiphy(_adapter *padapter)
 {
 	u8 rf_type;
 	struct ieee80211_supported_band *bands;
 	struct wireless_dev *pwdev = padapter->rtw_wdev;
 	struct wiphy *wiphy = pwdev->wiphy;
+	struct ieee80211_sta_vht_cap *vht_cap;
 	
 	rtw_hal_get_hwreg(padapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
 
@@ -6348,8 +6381,10 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
 #ifdef CONFIG_IEEE80211_BAND_5GHZ
 	if (IsSupported5G(padapter->registrypriv.wireless_mode)) {	
 		bands = wiphy->bands[IEEE80211_BAND_5GHZ];
-		if(bands)
+		if(bands) {
 			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, IEEE80211_BAND_5GHZ, rf_type);
+			rtw_cfg80211_create_vht_cap(padapter, &bands->vht_cap);
+		}
 	}
 #endif
 	/* init regulary domain */
