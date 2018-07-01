@@ -126,6 +126,7 @@ static void rtw_dev_shutdown(struct device *dev)
 #endif
 
 
+#define USB_VENDER_ID_EDIMAX		0x7392 //EDX
 #define USB_VENDER_ID_REALTEK		0x0BDA
 
 

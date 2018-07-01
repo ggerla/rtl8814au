@@ -150,6 +150,16 @@ phydm_setEDCCAThresholdAPI(
 	IN	u1Byte	IGI
 );
 
+void
+phydm_set_l2h_th_ini(
+	IN 	PVOID	 	pDM_VOID
+);
+
+void
+phydm_set_forgetting_factor(
+	IN 	PVOID	 	pDM_VOID
+);
+
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 VOID
 Phydm_DisableEDCCA(
